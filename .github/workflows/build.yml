@@ -2,6 +2,7 @@
 name: "Build Matrix Workflow"
 
 on:
+  workflow_dispatch: 
   workflow_call:
     inputs:
       version-label:
