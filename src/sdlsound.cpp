@@ -178,6 +178,13 @@ auto init_sound() -> bool
     const char *driver = SDL_GetCurrentAudioDriver();
     DebugLog( DL::Info, DC::Main ) << "Active audio driver: " << ( driver ? driver : "(none)" );
 
+    // Request smaller buffer for lower audio latency (especially noticeable
+    // on Android with Bluetooth headsets where SDL3 default buffer ~1s).
+    SDL_SetHint( SDL_HINT_AUDIO_DEVICE_SAMPLE_FRAMES, "512" );
+#if defined( __ANDROID__ )
+    SDL_SetHint( SDL_HINT_ANDROID_LOW_LATENCY_AUDIO, "1" );
+#endif
+
     SDL_AudioSpec spec = {};
     spec.format   = SDL_AUDIO_S16;
     spec.channels = 2;
