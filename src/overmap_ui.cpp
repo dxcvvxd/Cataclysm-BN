@@ -2134,6 +2134,12 @@ static tripoint_abs_omt display( const tripoint_abs_omt &orig,
     }
     // Configure input context for navigating the map.
     input_context ictxt( "OVERMAP" );
+    // Use the overmap tileset's iso flag, not the global tile_iso which reflects
+    // the main tileset. draw_om sets tile_iso from the overmap tileset during
+    // rendering but restores it, so the global may not match the overmap.
+    const auto *om_ts = overmap_tilecontext ? overmap_tilecontext->current_tileset() : nullptr;
+    const bool om_tile_iso = om_ts && om_ts->get_tile_iso();
+    ictxt.set_iso( om_tile_iso && use_tiles );
     ictxt.register_action( "ANY_INPUT" );
     ictxt.register_directions();
     ictxt.register_action( "CONFIRM" );

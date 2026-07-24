@@ -3363,8 +3363,10 @@ tripoint_rel_ms game::mouse_edge_scrolling_terrain( input_context &ctxt )
 
 tripoint_rel_omt game::mouse_edge_scrolling_overmap( input_context &ctxt )
 {
-    // overmap has no iso mode
-    auto ret = mouse_edge_scrolling( ctxt, 2, last_mouse_edge_scroll_vector_overmap, false );
+    const auto *om_ts = overmap_tilecontext ? overmap_tilecontext->current_tileset() : nullptr;
+    const bool om_tile_iso = om_ts && om_ts->get_tile_iso();
+    auto ret = mouse_edge_scrolling( ctxt, 2, last_mouse_edge_scroll_vector_overmap,
+                                     om_tile_iso && use_tiles );
     last_mouse_edge_scroll_vector_overmap = ret.second;
     last_mouse_edge_scroll_vector_terrain = tripoint_rel_ms::zero();
     return ret.first;

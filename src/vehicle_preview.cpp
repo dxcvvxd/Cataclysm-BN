@@ -258,7 +258,13 @@ void vehicle_preview_window::display( const vehicle &veh, tripoint_mnt_veh curso
         }
 
         const auto q = ( part.mount - cursor ).xy().rotate( 3 );
-        const point pixel_pos = center_px + point( q.x() * tile_w, q.y() * tile_h );
+        point pixel_pos;
+        if( tile_iso ) {
+            pixel_pos = center_px + point( ( q.x() - q.y() ) * tile_w / 2,
+                                           ( q.x() + q.y() ) * tile_h / 2 );
+        } else {
+            pixel_pos = center_px + point( q.x() * tile_w, q.y() * tile_h );
+        }
 
         // Get part rendering info
         char part_mod = 0;

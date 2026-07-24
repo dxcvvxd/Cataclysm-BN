@@ -130,7 +130,6 @@ void act_vehicle_unload_fuel( vehicle *veh );
 
 std::unique_ptr<player_activity> veh_interact::serialize_activity()
 {
-    const auto &here = get_map();
     const auto &you = get_avatar();
     const auto *pt = sel_vehicle_part;
     const auto *vp = sel_vpart_info;

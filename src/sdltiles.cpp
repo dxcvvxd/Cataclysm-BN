@@ -833,10 +833,9 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
     }
 #endif
 
-    // Overmap uses its own tileset (e.g. ASCIITiles) which is never iso.
-    // tile_iso is global and may be true from the main tileset (e.g. Ultica_iso).
-    // Reset from the overmap tileset so get_window_tile_counts, draw_from_id_string,
-    // and highlight rendering all use orthographic math.
+    // Overmap uses the same tileset as the main view (e.g. Ultica_iso).
+    // Keep tile_iso from the tileset so iso sprites render without diamond gaps,
+    // but set o to center_abs_omt so the view is centered on screen (not shifted).
     const auto saved_tile_iso = tile_iso;
     tile_iso = tileset_ptr ? tileset_ptr->get_tile_iso() : false;
 
@@ -857,9 +856,15 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
     get_window_tile_counts( width, height, s.x, s.y );
 
     op = point( dest.x * fontwidth, dest.y * fontheight );
-    // Rounding up to include incomplete tiles at the bottom/right edges
-    screentile_width = divide_round_up( width, tile_width );
-    screentile_height = divide_round_up( height, tile_height );
+    viewport_width = width;
+    viewport_height = height;
+    if( tile_iso ) {
+        screentile_width = divide_round_up( width * 2, tile_width ) + 1;
+        screentile_height = divide_round_up( height * 4, tile_width ) + 1;
+    } else {
+        screentile_width = divide_round_up( width, tile_width );
+        screentile_height = divide_round_up( height, tile_height );
+    }
 
     const int min_col = 0;
     const int max_col = s.x;
@@ -880,7 +885,13 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
     const bool showhordes = uistate.overmap_show_hordes;
     const bool viewing_weather = ( ( uistate.overmap_debug_weather || uistate.overmap_visible_weather )
                                    && center_abs_omt.z() >= 0 );
-    o = corner_NW.xy().reinterpret_as<point_bub_ms>();
+    // Iso: player_to_tile adds screentile_width/2 centering, so o = center makes
+    // center tile → screen center. Ortho: no centering offset, so o = corner_NW.
+    if( tile_iso ) {
+        o = center_abs_omt.xy().reinterpret_as<point_bub_ms>();
+    } else {
+        o = corner_NW.xy().reinterpret_as<point_bub_ms>();
+    }
 
     const auto global_omt_to_draw_position = []( const tripoint_abs_omt & omp ) {
         // z position is hardcoded to 0 because the things this will be used to draw should not be skipped
@@ -1207,10 +1218,8 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
 
     if( !viewing_weather && uistate.overmap_show_city_labels ) {
         const auto abs_sm_to_draw_label = [&]( const tripoint_abs_sm & city_pos, const int label_length ) {
-            const auto tile_draw_pos = global_omt_to_draw_position( project_to<coords::omt>
-                                       ( city_pos ) ) - o;
-            point draw_point( tile_draw_pos.x() * tile_width + dest.x,
-                              tile_draw_pos.y() * tile_height + dest.y );
+            auto draw_point = player_to_screen(
+                global_omt_to_draw_position( project_to<coords::omt>( city_pos ) ).xy() );
             // center text on the tile
             draw_point += point( ( tile_width - label_length * fontwidth ) / 2,
                                  ( tile_height - fontheight ) / 2 );
@@ -1229,9 +1238,7 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
         };
 
         const auto abs_omt_to_draw_label = [&]( const tripoint_abs_omt & omt_pos, const int label_length ) {
-            const auto tile_draw_pos = global_omt_to_draw_position( omt_pos ) - o;
-            auto draw_point = point( tile_draw_pos.x() * tile_width + dest.x,
-                                     tile_draw_pos.y() * tile_height + dest.y );
+            auto draw_point = player_to_screen( global_omt_to_draw_position( omt_pos ).xy() );
             draw_point += point( ( tile_width - label_length * fontwidth ) / 2,
                                  ( tile_height - fontheight ) / 2 );
             return draw_point;
@@ -1340,11 +1347,9 @@ void cata_tiles::draw_om( point dest, const tripoint_abs_omt &center_abs_omt, bo
 
         // Find screen coordinates to the right of the center tile
         auto center_sm = coords::project_to<coords::sm>( tripoint_abs_omt( center_abs_omt.x() + 1,
-                         center_abs_omt.y(), center_abs_omt.z() ) );
-        const auto tile_draw_pos = global_omt_to_draw_position( project_to<coords::omt>
-                                   ( center_sm ) ) - o;
-        point draw_point( tile_draw_pos.x() * tile_width + dest.x,
-                          tile_draw_pos.y() * tile_height + dest.y );
+            center_abs_omt.y(), center_abs_omt.z() ) );
+        point draw_point = player_to_screen( global_omt_to_draw_position( project_to<coords::omt>
+            ( center_sm ) ).xy() );
         draw_point += point( padding, padding );
 
         // Draw notes header. Very simple label at the moment
